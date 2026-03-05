@@ -5,19 +5,19 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 
-# 1. Registration View
+#registration
 def register_view(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user) # Log the user in immediately after signing up
+            login(request, user) 
             return redirect('home')
     else:
         form = UserCreationForm()
     return render(request, 'register.html', {'form': form})
 
-# 2. Protect your Employee views
+
 @login_required(login_url='login')
 
 def home(request):

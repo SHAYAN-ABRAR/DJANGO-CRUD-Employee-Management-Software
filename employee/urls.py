@@ -10,7 +10,7 @@ urlpatterns = [
     path('update/update_emp/<int:id>/', views.update_emp, name='update_emp'),
     path('delete_emp/<int:id>/', views.delete_emp, name='delete_emp'),
 
-    # Auth URLs
+    # Auth
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('register/', views.register_view, name='register'),

@@ -1,29 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
+{% block title %}Add Employee{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-{% load static %}
-<link rel="stylesheet" href="{% static 'style.css' %}">
-
-<body>
-    <div class="container1">
-        <h1>Add Employee</h1>
-        <form action="{% url 'create_emp' %}" method="post">
-            {% csrf_token %}
-            <label for="">Employee ID</label><br><br>
-            <input type="text" name="emp_id"><br><br>
-            <label for="">Employee Name</label><br><br>
-            <input type="text" name="emp_name"><br><br>
-            <label for="">Employee Dept.</label><br><br>
-            <input type="text" name="emp_dept"><br><br>
-            <button type="submit" id="new">Submit</button>
-        </form>
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm p-4">
+            <h2>Add New Employee</h2>
+            <form action="{% url 'create_emp' %}" method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Employee ID</label>
+                    <input type="text" name="emp_id" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Employee Name</label>
+                    <input type="text" name="emp_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" name="emp_dept" class="form-control" required>
+                </div>
+                <button type="submit" id="new" class="btn btn-primary w-100">Save Employee</button>
+            </form>
+            <a href="{% url 'home' %}" class="btn btn-link mt-2">Back to List</a>
+        </div>
     </div>
-</body>
-
-</html>
+</div>
+{% endblock %}
