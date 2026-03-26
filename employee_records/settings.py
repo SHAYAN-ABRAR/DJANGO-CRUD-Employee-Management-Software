@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'employee',
     'payroll',
+    'rest_framework',
     
 ]
 

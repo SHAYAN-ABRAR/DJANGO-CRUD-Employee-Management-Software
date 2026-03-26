@@ -6,6 +6,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import EmployeeSerializer
+
 
 # 1. Registration - Good as is
 def register_view(request):
@@ -126,3 +131,19 @@ def permanent_delete_emp(request, id):
         employee.delete() # This permanently removes it from the DB
         messages.error(request, f"Employee {name} has been permanently deleted.")
     return redirect('trash_view')
+
+
+class EmployeeListAPI(APIView):
+    def get(self, request):
+        # We only want to share active employees
+        employees = Employee.objects.filter(is_deleted=False)
+        # 'many=True' tells the translator there is a list of items
+        serializer = EmployeeSerializer(employees, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = EmployeeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
