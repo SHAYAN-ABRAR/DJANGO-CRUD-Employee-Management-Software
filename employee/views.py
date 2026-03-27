@@ -10,9 +10,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import EmployeeSerializer
+import openpyxl
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
 
-
-# 1. Registration - Good as is
+# --- 1. AUTHENTICATION ---
 def register_view(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
@@ -24,12 +26,10 @@ def register_view(request):
         form = UserCreationForm()
     return render(request, 'register.html', {'form': form})
 
-# 2. Main Home View - FIXED to exclude soft-deleted employees
+# --- 2. MAIN VIEWS ---
 @login_required(login_url='login')
 def home(request):
     query = request.GET.get('search', '')
-    
-    # CRITICAL: Filter by is_deleted=False so "deleted" ones don't show up
     base_query = Employee.objects.filter(is_deleted=False)
     
     if query:
@@ -50,7 +50,7 @@ def home(request):
         'query': query
     })
 
-# 3. Create Views - Good
+# --- 3. CRUD OPERATIONS ---
 @login_required(login_url='login')
 def create_view(request):
     return render(request, 'create.html')
@@ -63,22 +63,16 @@ def create_emp(request):
         emp_dept = request.POST.get('emp_dept')
 
         try:
-            # Try to convert the ID to an integer
             emp_id = int(emp_id) 
-            
             if emp_id and emp_name and emp_dept:
                 Employee.objects.create(emp_id=emp_id, emp_name=emp_name, emp_dept=emp_dept)
                 messages.success(request, f"Employee {emp_name} added successfully!")
                 return redirect('home')
-        
         except ValueError:
-            # This catches the "yuio" error
             messages.error(request, "Error: Employee ID must be a number!")
             return redirect('create_view')
-
     return redirect('home')
 
-# 4. Update Views - Good
 @login_required(login_url='login')
 def update_view(request, id):
     employee = get_object_or_404(Employee, id=id)
@@ -96,21 +90,18 @@ def update_emp(request, id):
         return redirect('home')
     return redirect('update_view', id=id)
 
-# 5. Soft Delete View - REMOVED DUPLICATE
+# --- 4. TRASH & SOFT DELETE ---
 @login_required(login_url='login')
 def delete_emp(request, id):
     employee = get_object_or_404(Employee, id=id)
-    
     if request.method == "POST":
-        employee.is_deleted = True # Soft delete
+        employee.is_deleted = True 
         employee.save()
         messages.warning(request, f"Employee {employee.emp_name} moved to trash.")
-    
     return redirect('home')
 
 @login_required(login_url='login')
 def trash_view(request):
-    # Filter for ONLY employees marked as deleted
     deleted_employees = Employee.objects.filter(is_deleted=True).order_by('-id')
     return render(request, 'trash.html', {'employees': deleted_employees})
 
@@ -118,7 +109,7 @@ def trash_view(request):
 def restore_emp(request, id):
     employee = get_object_or_404(Employee, id=id)
     if request.method == "POST":
-        employee.is_deleted = False # The "Restore" magic
+        employee.is_deleted = False 
         employee.save()
         messages.success(request, f"Employee {employee.emp_name} has been restored!")
     return redirect('trash_view')
@@ -128,16 +119,57 @@ def permanent_delete_emp(request, id):
     employee = get_object_or_404(Employee, id=id)
     if request.method == "POST":
         name = employee.emp_name
-        employee.delete() # This permanently removes it from the DB
+        employee.delete() 
         messages.error(request, f"Employee {name} has been permanently deleted.")
     return redirect('trash_view')
 
+# --- 5. EXPORT FEATURES (Corrected Indentation & Filtering) ---
+@login_required(login_url='login')
+def export_employees_excel(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Employees"
 
+    ws.append(['ID', 'Name', 'Department'])
+
+    # Only export employees NOT in trash
+    for emp in Employee.objects.filter(is_deleted=False):
+        ws.append([emp.emp_id, emp.emp_name, emp.emp_dept])
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="employee_list.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required(login_url='login')
+def export_employees_pdf(request):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="employees.pdf"'
+
+    p = canvas.Canvas(response)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(100, 800, "Employee Records Report")
+    
+    p.setFont("Helvetica", 12)
+    y = 750
+    # Only export employees NOT in trash
+    for emp in Employee.objects.filter(is_deleted=False):
+        p.drawString(100, y, f"ID: {emp.emp_id} | Name: {emp.emp_name} | Dept: {emp.emp_dept}")
+        y -= 20 
+        if y < 50:
+            p.showPage()
+            y = 800
+
+    p.showPage()
+    p.save()
+    return response
+
+# --- 6. API VIEWS ---
 class EmployeeListAPI(APIView):
     def get(self, request):
-        # We only want to share active employees
         employees = Employee.objects.filter(is_deleted=False)
-        # 'many=True' tells the translator there is a list of items
         serializer = EmployeeSerializer(employees, many=True)
         return Response(serializer.data)
 
@@ -147,13 +179,10 @@ class EmployeeListAPI(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 class EmployeeDetailAPI(APIView):
     def delete(self, request, pk):
-        # Find the employee by their database ID (pk)
         employee = get_object_or_404(Employee, id=pk)
-        # Apply your Soft Delete logic
         employee.is_deleted = True
         employee.save()
         return Response({"message": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)

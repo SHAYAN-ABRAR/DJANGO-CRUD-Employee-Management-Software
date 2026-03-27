@@ -22,4 +22,7 @@ urlpatterns = [
 
     path('api/employees/', EmployeeListAPI.as_view(), name='employee_api'),
     path('api/employees/<int:pk>/', views.EmployeeDetailAPI.as_view(), name='employee_detail_api'),
+    
+    path('export/excel/', views.export_employees_excel, name='export_excel'),
+    path('export/pdf/', views.export_employees_pdf, name='export_pdf'),
 ]
