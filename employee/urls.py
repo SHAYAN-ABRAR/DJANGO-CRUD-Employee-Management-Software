@@ -21,4 +21,5 @@ urlpatterns = [
     path('register/', views.register_view, name='register'),
 
     path('api/employees/', EmployeeListAPI.as_view(), name='employee_api'),
+    path('api/employees/<int:pk>/', views.EmployeeDetailAPI.as_view(), name='employee_detail_api'),
 ]

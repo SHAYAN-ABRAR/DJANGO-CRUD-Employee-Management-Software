@@ -147,3 +147,13 @@ class EmployeeListAPI(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class EmployeeDetailAPI(APIView):
+    def delete(self, request, pk):
+        # Find the employee by their database ID (pk)
+        employee = get_object_or_404(Employee, id=pk)
+        # Apply your Soft Delete logic
+        employee.is_deleted = True
+        employee.save()
+        return Response({"message": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
